@@ -1,0 +1,2558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Scheduling Simulator | OS Lab</title>
+<meta name="description" content="Interactive CPU Scheduling Simulator with FCFS, SJF, Round Robin, and MLFQ algorithms. Visualize Gantt charts, turnaround time, waiting time and more.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #0f1629;
+    --bg-card: #131d35;
+    --bg-card-hover: #1a2545;
+    --bg-glass: rgba(19, 29, 53, 0.8);
+    --accent-blue: #4f8ef7;
+    --accent-purple: #8b5cf6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-orange: #f97316;
+    --accent-pink: #ec4899;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: rgba(79, 142, 247, 0.2);
+    --border-hover: rgba(79, 142, 247, 0.5);
+    --glow-blue: 0 0 20px rgba(79, 142, 247, 0.3);
+    --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(79,142,247,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, rgba(15,22,41,0.95) 0%, rgba(10,14,26,0.98) 100%);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    padding: 20px 0;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+  }
+
+  .header-inner {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--glow-blue);
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba(79,142,247,0.4); }
+    50% { box-shadow: 0 0 30px rgba(79,142,247,0.7), 0 0 60px rgba(139,92,246,0.3); }
+  }
+
+  .logo-text h1 { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+  .logo-text p { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+
+  .header-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--accent-blue); border: 1px solid rgba(79,142,247,0.3); }
+  .badge-purple { background: rgba(139,92,246,0.15); color: var(--accent-purple); border: 1px solid rgba(139,92,246,0.3); }
+  .badge-cyan { background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 1px solid rgba(6,182,212,0.3); }
+
+  /* Tab Navigation */
+  .tabs {
+    display: flex; gap: 2px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    padding: 14px 20px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid transparent;
+    transition: var(--transition);
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.03); }
+  .tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+  .tab-btn .tab-icon { font-size: 16px; }
+
+  /* Tab Content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Main Simulator Layout */
+  .simulator-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    padding: 24px 0;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+    transition: var(--transition);
+  }
+
+  .card:hover { border-color: var(--border-hover); }
+
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-header .icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .icon-blue { background: rgba(79,142,247,0.15); }
+  .icon-purple { background: rgba(139,92,246,0.15); }
+  .icon-green { background: rgba(16,185,129,0.15); }
+  .icon-cyan { background: rgba(6,182,212,0.15); }
+  .icon-yellow { background: rgba(245,158,11,0.15); }
+  .icon-orange { background: rgba(249,115,22,0.15); }
+
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .card-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Form Elements */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.3px;
+  }
+
+  .form-input, .form-select {
+    width: 100%; padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px; font-family: 'Inter', sans-serif;
+    transition: var(--transition);
+    outline: none;
+  }
+
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+  }
+
+  .form-select option { background: var(--bg-secondary); }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* Buttons */
+  .btn {
+    padding: 10px 18px; border: none; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: var(--transition); font-family: 'Inter', sans-serif;
+    display: inline-flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-blue), #3b6fd4);
+    color: white;
+    box-shadow: 0 4px 15px rgba(79,142,247,0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 25px rgba(79,142,247,0.5);
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, var(--accent-green), #059669);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+  }
+
+  .btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 25px rgba(16,185,129,0.5);
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, var(--accent-red), #dc2626);
+    color: white;
+    box-shadow: 0 4px 15px rgba(239,68,68,0.3);
+  }
+
+  .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(239,68,68,0.5); }
+
+  .btn-outline {
+    background: transparent; color: var(--accent-blue);
+    border: 1px solid rgba(79,142,247,0.4);
+  }
+
+  .btn-outline:hover { background: rgba(79,142,247,0.1); border-color: var(--accent-blue); }
+
+  .btn-warning {
+    background: linear-gradient(135deg, var(--accent-yellow), #d97706);
+    color: white; box-shadow: 0 4px 15px rgba(245,158,11,0.3);
+  }
+
+  .btn-warning:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(245,158,11,0.5); }
+
+  .btn-purple {
+    background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+    color: white; box-shadow: 0 4px 15px rgba(139,92,246,0.3);
+  }
+
+  .btn-purple:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(139,92,246,0.5); }
+
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 8px; font-size: 11px; }
+  .btn-block { width: 100%; justify-content: center; }
+
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Process Table */
+  .process-table-wrap { overflow-x: auto; border-radius: var(--radius-sm); }
+  .process-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .process-table th {
+    background: rgba(79,142,247,0.1);
+    color: var(--accent-blue);
+    padding: 10px 12px; text-align: center;
+    font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .process-table td {
+    padding: 9px 12px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary); font-size: 12px;
+    transition: var(--transition);
+  }
+
+  .process-table tr:last-child td { border-bottom: none; }
+  .process-table tr:hover td { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+  .process-table tr.highlighted td { background: rgba(79,142,247,0.1); color: var(--text-primary); }
+
+  .pid-badge {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+
+  /* Right Panel */
+  .right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Algorithm Selector */
+  .algo-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .algo-card {
+    padding: 14px; border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    cursor: pointer; transition: var(--transition);
+    text-align: center; background: var(--bg-secondary);
+  }
+
+  .algo-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+  .algo-card.selected { border-color: var(--accent-blue); background: rgba(79,142,247,0.1); }
+  .algo-card .algo-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+  .algo-card .algo-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .algo-card .algo-desc { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+  /* Gantt Chart */
+  .gantt-section { }
+  .gantt-container {
+    overflow-x: auto; padding: 10px 0;
+  }
+
+  .gantt-chart {
+    display: flex; align-items: stretch; min-width: max-content;
+    position: relative; margin-bottom: 24px;
+  }
+
+  .gantt-block {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 60px; height: 56px;
+    border-radius: 0;
+    position: relative; cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    border-right: 1px solid rgba(0,0,0,0.3);
+  }
+
+  .gantt-block:first-child { border-radius: 8px 0 0 8px; }
+  .gantt-block:last-child { border-radius: 0 8px 8px 0; border-right: none; }
+  .gantt-block:hover { transform: scaleY(1.05); filter: brightness(1.2); z-index: 2; }
+
+  .gantt-block.active-block {
+    animation: gantt-pulse 0.6s ease-in-out;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+  }
+
+  @keyframes gantt-pulse {
+    0% { transform: scaleY(1); filter: brightness(1); }
+    50% { transform: scaleY(1.1); filter: brightness(1.5); }
+    100% { transform: scaleY(1); filter: brightness(1); }
+  }
+
+  .gantt-block-pid { font-size: 13px; font-weight: 700; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .gantt-block-time { font-size: 9px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+  .gantt-timeline {
+    display: flex; min-width: max-content; margin-top: 4px;
+  }
+
+  .gantt-tick {
+    font-size: 10px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: left; min-width: 60px;
+    padding-left: 4px;
+  }
+
+  .gantt-tick:last-child { min-width: auto; }
+
+  /* Idle block */
+  .gantt-block.idle {
+    background: repeating-linear-gradient(45deg, #1a2040, #1a2040 5px, #202846 5px, #202846 10px);
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  }
+
+  .stat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px; text-align: center;
+  }
+
+  .stat-value { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .stat-unit { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+  /* Results Table */
+  .results-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .results-table th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary); padding: 10px 14px;
+    text-align: center; font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .results-table td {
+    padding: 10px 14px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary); font-family: 'JetBrains Mono', monospace;
+  }
+  .results-table tr:hover td { background: rgba(255,255,255,0.03); color: var(--text-primary); }
+  .results-table .highlight-cell { color: var(--accent-blue); font-weight: 600; }
+  .results-table .good { color: var(--accent-green); }
+  .results-table .bad { color: var(--accent-red); }
+
+  /* Operation Log */
+  .log-container {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    max-height: 220px; overflow-y: auto;
+    padding: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .log-entry {
+    padding: 5px 8px; border-radius: 4px;
+    margin-bottom: 3px; border-left: 2px solid transparent;
+    animation: fadeInLog 0.3s ease;
+    line-height: 1.5;
+  }
+
+  @keyframes fadeInLog {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-entry.info { border-left-color: var(--accent-blue); color: var(--accent-blue); background: rgba(79,142,247,0.05); }
+  .log-entry.success { border-left-color: var(--accent-green); color: var(--accent-green); background: rgba(16,185,129,0.05); }
+  .log-entry.warning { border-left-color: var(--accent-yellow); color: var(--accent-yellow); background: rgba(245,158,11,0.05); }
+  .log-entry.event { border-left-color: var(--accent-purple); color: var(--accent-purple); background: rgba(139,92,246,0.05); }
+  .log-entry.step { border-left-color: var(--text-muted); color: var(--text-muted); background: transparent; }
+
+  .log-timestamp { color: var(--text-muted); font-size: 10px; }
+
+  /* Color palette for processes */
+  .color-p0 { background: linear-gradient(135deg, #4f8ef7, #3b6fd4); }
+  .color-p1 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .color-p2 { background: linear-gradient(135deg, #10b981, #059669); }
+  .color-p3 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .color-p4 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .color-p5 { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  .color-p6 { background: linear-gradient(135deg, #ec4899, #db2777); }
+  .color-p7 { background: linear-gradient(135deg, #f97316, #ea580c); }
+
+  .dot-p0 { background: #4f8ef7; }
+  .dot-p1 { background: #8b5cf6; }
+  .dot-p2 { background: #10b981; }
+  .dot-p3 { background: #f59e0b; }
+  .dot-p4 { background: #ef4444; }
+  .dot-p5 { background: #06b6d4; }
+  .dot-p6 { background: #ec4899; }
+  .dot-p7 { background: #f97316; }
+
+  /* Process Legend */
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-secondary);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px;
+    font-size: 11px; color: var(--text-primary);
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s;
+    box-shadow: var(--shadow-card);
+    z-index: 10;
+  }
+
+  .gantt-block:hover .tooltip { opacity: 1; }
+
+  /* Lab content tabs */
+  .lab-tabs {
+    display: flex; gap: 2px; margin-bottom: 20px;
+    background: var(--bg-secondary); border-radius: var(--radius-sm);
+    padding: 4px;
+  }
+
+  .lab-tab-btn {
+    flex: 1; padding: 8px 12px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 12px; font-weight: 500;
+    border-radius: var(--radius-xs);
+    transition: var(--transition); font-family: 'Inter', sans-serif;
+  }
+
+  .lab-tab-btn.active {
+    background: var(--bg-card); color: var(--accent-blue);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .lab-tab-content { display: none; }
+  .lab-tab-content.active { display: block; }
+
+  /* Lab content */
+  .lab-section { margin-bottom: 24px; }
+  .lab-section h3 {
+    font-size: 16px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+
+  .lab-section p, .lab-section li {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 8px;
+  }
+
+  .lab-section ul, .lab-section ol {
+    padding-left: 20px; margin-bottom: 10px;
+  }
+
+  /* Code block */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .code-block pre { color: var(--text-secondary); }
+  .code-keyword { color: #ff79c6; }
+  .code-type { color: #8be9fd; }
+  .code-string { color: #f1fa8c; }
+  .code-comment { color: #6272a4; font-style: italic; }
+  .code-number { color: #bd93f9; }
+  .code-func { color: #50fa7b; }
+
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(79,142,247,0.2); color: var(--accent-blue);
+    border: 1px solid rgba(79,142,247,0.3); border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+    transition: var(--transition); font-family: 'Inter', sans-serif;
+  }
+
+  .copy-btn:hover { background: rgba(79,142,247,0.3); }
+
+  /* FAQ */
+  .faq-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px; overflow: hidden;
+  }
+
+  .faq-question {
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: var(--transition);
+    font-size: 13px; font-weight: 600; color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+
+  .faq-question:hover { background: var(--bg-card-hover); }
+  .faq-toggle { font-size: 18px; color: var(--accent-blue); transition: var(--transition); }
+  .faq-item.open .faq-toggle { transform: rotate(45deg); }
+
+  .faq-answer {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.6;
+    background: var(--bg-card);
+  }
+
+  .faq-item.open .faq-answer { max-height: 300px; padding: 14px 16px; }
+
+  /* Comparison Table */
+  .comparison-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comparison-table th {
+    background: rgba(79,142,247,0.1); color: var(--accent-blue);
+    padding: 10px 14px; text-align: center; font-weight: 600;
+    border: 1px solid var(--border);
+  }
+  .comparison-table td {
+    padding: 10px 14px; border: 1px solid var(--border);
+    color: var(--text-secondary); text-align: center;
+  }
+  .comparison-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  /* Notification Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 20px;
+    box-shadow: var(--shadow-card); font-size: 13px;
+    display: flex; align-items: center; gap: 10px;
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 350px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.toast-success { border-left: 3px solid var(--accent-green); }
+  .toast.toast-error { border-left: 3px solid var(--accent-red); }
+  .toast.toast-info { border-left: 3px solid var(--accent-blue); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  /* Animation classes */
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .slide-in { animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* Loading spinner */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Step animation indicator */
+  .step-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-muted);
+    margin-top: 10px;
+  }
+
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+
+  .step-dot.done { background: var(--accent-green); }
+  .step-dot.active { background: var(--accent-blue); box-shadow: 0 0 10px rgba(79,142,247,0.6); animation: dot-pulse 1s infinite; }
+
+  @keyframes dot-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+  /* Process Queue Visualization */
+  .queue-visual {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; padding: 10px;
+    background: var(--bg-secondary); border-radius: var(--radius-sm);
+    min-height: 50px; align-items: center;
+  }
+
+  .queue-item {
+    padding: 6px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; color: white;
+    animation: fadeIn 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Info boxes */
+  .info-box {
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    font-size: 12px; line-height: 1.6; margin-bottom: 12px;
+    display: flex; gap: 10px;
+  }
+
+  .info-box-blue { background: rgba(79,142,247,0.08); border: 1px solid rgba(79,142,247,0.2); color: #93b8fb; }
+  .info-box-yellow { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); color: #fcd268; }
+  .info-box-green { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+  .info-box-red { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+
+  /* Section divider */
+  .divider {
+    border: none; border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* RR quantum input */
+  .quantum-group {
+    display: none; margin-top: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .quantum-group.show { display: block; }
+
+  /* MLFQ levels */
+  .mlfq-levels {
+    display: none; margin-top: 10px;
+    animation: fadeIn 0.3s ease;
+  }
+  .mlfq-levels.show { display: flex; flex-direction: column; gap: 8px; }
+
+  .mlfq-level {
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg-secondary);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .mlfq-level-info { font-size: 12px; }
+  .mlfq-level-name { font-weight: 600; color: var(--text-primary); }
+  .mlfq-level-desc { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .mlfq-level-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-muted); font-size: 13px;
+  }
+
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; display: block; opacity: 0.5; }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .simulator-layout { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .algo-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .header-badges { display: none; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    .algo-grid { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 0 12px; }
+  }
+
+  /* Step-by-step animation */
+  .sim-controls {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+
+  /* Highlight row in results */
+  @keyframes highlightRow {
+    0% { background: rgba(79,142,247,0.3); }
+    100% { background: transparent; }
+  }
+  .row-highlight { animation: highlightRow 1.5s ease; }
+
+  /* Progress bar for quantum */
+  .quantum-bar-wrap {
+    background: var(--bg-secondary); border-radius: 4px; height: 4px; margin-top: 6px; overflow: hidden;
+  }
+  .quantum-bar {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    transition: width 0.3s ease;
+  }
+
+  /* Section tabs styling */
+  .tab-panel { padding: 24px 0; }
+
+  /* Hero section in lab */
+  .algo-hero {
+    background: linear-gradient(135deg, rgba(79,142,247,0.1), rgba(139,92,246,0.1));
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: var(--radius);
+    padding: 24px; margin-bottom: 24px;
+  }
+
+  .algo-hero h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .algo-hero p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .formula-box {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 16px; margin: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--accent-cyan);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">⚙️</div>
+        <div class="logo-text">
+          <h1>CPU Scheduling Simulator</h1>
+          <p>Operating Systems Lab — Visual Learning Tool</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-blue">FCFS</span>
+        <span class="badge badge-purple">SJF</span>
+        <span class="badge badge-cyan">Round Robin</span>
+        <span class="badge badge-blue">MLFQ</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Tabs -->
+<div class="tabs" id="mainTabs">
+  <button class="tab-btn active" onclick="switchTab('simulator')" id="tab-simulator">
+    <span class="tab-icon">🖥️</span> Simulator
+  </button>
+  <button class="tab-btn" onclick="switchTab('lab')" id="tab-lab">
+    <span class="tab-icon">📖</span> Lab Procedure
+  </button>
+  <button class="tab-btn" onclick="switchTab('compare')" id="tab-compare">
+    <span class="tab-icon">📊</span> Algorithm Comparison
+  </button>
+  <button class="tab-btn" onclick="switchTab('faq')" id="tab-faq">
+    <span class="tab-icon">❓</span> FAQ
+  </button>
+</div>
+
+<!-- ==================== SIMULATOR TAB ==================== -->
+<div class="tab-content active" id="content-simulator">
+<div class="container">
+<div class="simulator-layout">
+
+  <!-- Left Panel: Input -->
+  <div class="left-panel">
+
+    <!-- Process Input -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <div class="icon icon-blue">➕</div>
+        <div>
+          <div class="card-title">Add Process</div>
+          <div class="card-subtitle">Enter process parameters</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Process ID</label>
+        <input type="text" id="pidInput" class="form-input" value="P1" placeholder="e.g. P1" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Arrival Time</label>
+          <input type="number" id="arrInput" class="form-input" value="0" min="0" placeholder="0" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Burst Time</label>
+          <input type="number" id="burstInput" class="form-input" value="5" min="1" placeholder="1" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Priority <span style="color:var(--text-muted)">(lower = higher priority)</span></label>
+        <input type="number" id="priorityInput" class="form-input" value="1" min="1" placeholder="1" />
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary btn-block" onclick="addProcess()" id="addBtn">
+          ➕ Add Process
+        </button>
+      </div>
+
+      <div class="btn-group" style="margin-top:8px">
+        <button class="btn btn-outline btn-sm" onclick="loadSampleData()" style="flex:1">📂 Load Sample</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAll()" style="flex:1">🗑️ Clear All</button>
+      </div>
+    </div>
+
+    <!-- Process List -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <div class="icon icon-purple">📋</div>
+        <div>
+          <div class="card-title">Process Queue</div>
+          <div class="card-subtitle" id="processCount">0 processes</div>
+        </div>
+      </div>
+
+      <div class="process-table-wrap">
+        <table class="process-table" id="processTable">
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>AT</th>
+              <th>BT</th>
+              <th>Pri</th>
+              <th>Del</th>
+            </tr>
+          </thead>
+          <tbody id="processTableBody">
+            <tr><td colspan="5" style="color:var(--text-muted);padding:20px;text-align:center;">No processes added yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="legend" id="processLegend"></div>
+    </div>
+
+    <!-- Algorithm Selection -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon icon-cyan">⚡</div>
+        <div>
+          <div class="card-title">Scheduling Algorithm</div>
+          <div class="card-subtitle">Choose scheduling strategy</div>
+        </div>
+      </div>
+
+      <div class="algo-grid">
+        <div class="algo-card selected" id="algo-fcfs" onclick="selectAlgo('fcfs')">
+          <span class="algo-icon">🏁</span>
+          <div class="algo-name">FCFS</div>
+          <div class="algo-desc">First Come First Served</div>
+        </div>
+        <div class="algo-card" id="algo-sjf" onclick="selectAlgo('sjf')">
+          <span class="algo-icon">⚡</span>
+          <div class="algo-name">SJF</div>
+          <div class="algo-desc">Shortest Job First</div>
+        </div>
+        <div class="algo-card" id="algo-srtf" onclick="selectAlgo('srtf')">
+          <span class="algo-icon">🔄</span>
+          <div class="algo-name">SRTF</div>
+          <div class="algo-desc">Preemptive SJF</div>
+        </div>
+        <div class="algo-card" id="algo-rr" onclick="selectAlgo('rr')">
+          <span class="algo-icon">🔁</span>
+          <div class="algo-name">Round Robin</div>
+          <div class="algo-desc">Time Quantum</div>
+        </div>
+        <div class="algo-card" id="algo-priority" onclick="selectAlgo('priority')">
+          <span class="algo-icon">🏆</span>
+          <div class="algo-name">Priority</div>
+          <div class="algo-desc">Non-Preemptive</div>
+        </div>
+        <div class="algo-card" id="algo-mlfq" onclick="selectAlgo('mlfq')">
+          <span class="algo-icon">🏢</span>
+          <div class="algo-name">MLFQ</div>
+          <div class="algo-desc">Multi-Level Feedback Q</div>
+        </div>
+      </div>
+
+      <!-- RR Quantum -->
+      <div class="quantum-group" id="quantumGroup">
+        <label class="form-label">Time Quantum (q)</label>
+        <input type="number" id="quantumInput" class="form-input" value="2" min="1" placeholder="2" />
+      </div>
+
+      <!-- MLFQ Config -->
+      <div class="mlfq-levels" id="mlfqConfig">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">MLFQ Queue Configuration:</div>
+        <div class="mlfq-level">
+          <div class="mlfq-level-info">
+            <div class="mlfq-level-name">Queue 1 (Highest Priority)</div>
+            <div class="mlfq-level-desc">Round Robin, q = 2</div>
+          </div>
+          <span class="mlfq-level-badge badge badge-blue">RR q=2</span>
+        </div>
+        <div class="mlfq-level">
+          <div class="mlfq-level-info">
+            <div class="mlfq-level-name">Queue 2 (Medium Priority)</div>
+            <div class="mlfq-level-desc">Round Robin, q = 4</div>
+          </div>
+          <span class="mlfq-level-badge badge badge-purple">RR q=4</span>
+        </div>
+        <div class="mlfq-level">
+          <div class="mlfq-level-info">
+            <div class="mlfq-level-name">Queue 3 (Lowest Priority)</div>
+            <div class="mlfq-level-desc">FCFS</div>
+          </div>
+          <span class="mlfq-level-badge badge badge-cyan">FCFS</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <button class="btn btn-success btn-block" onclick="runSimulation()" id="runBtn">
+          ▶ Run Simulation
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel: Output -->
+  <div class="right-panel">
+
+    <!-- Gantt Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon icon-blue">📊</div>
+        <div>
+          <div class="card-title">Gantt Chart</div>
+          <div class="card-subtitle" id="ganttSubtitle">Run simulation to see the Gantt chart</div>
+        </div>
+        <div style="margin-left:auto">
+          <button class="btn btn-outline btn-sm" onclick="animateGantt()" id="animateBtn" style="display:none">
+            ▶ Animate
+          </button>
+        </div>
+      </div>
+
+      <div id="ganttSection">
+        <div class="empty-state">
+          <span class="empty-icon">📊</span>
+          <div>Add processes and run simulation to see the Gantt chart</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="card" id="statsCard" style="display:none">
+      <div class="card-header">
+        <div class="icon icon-green">📈</div>
+        <div>
+          <div class="card-title">Performance Metrics</div>
+          <div class="card-subtitle">Average turnaround and waiting times</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card" id="resultsCard" style="display:none">
+      <div class="card-header">
+        <div class="icon icon-yellow">📋</div>
+        <div>
+          <div class="card-title">Process Results</div>
+          <div class="card-subtitle">Completion, Turnaround & Waiting Times</div>
+        </div>
+      </div>
+
+      <div class="process-table-wrap">
+        <table class="results-table" id="resultsTable">
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>Arrival</th>
+              <th>Burst</th>
+              <th>Completion</th>
+              <th>Turnaround</th>
+              <th>Waiting</th>
+              <th>Response</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="formula-box" style="margin-top:14px">
+        TAT = CT − AT &nbsp;|&nbsp; WT = TAT − BT &nbsp;|&nbsp; RT = First CPU Time − AT
+      </div>
+    </div>
+
+    <!-- Ready Queue Visualization -->
+    <div class="card" id="queueCard" style="display:none">
+      <div class="card-header">
+        <div class="icon icon-orange">🔄</div>
+        <div>
+          <div class="card-title">Ready Queue Snapshot</div>
+          <div class="card-subtitle">Processes waiting for CPU</div>
+        </div>
+      </div>
+      <div class="queue-visual" id="queueVisual"></div>
+    </div>
+
+    <!-- Operation Log -->
+    <div class="card">
+      <div class="card-header">
+        <div class="icon icon-purple">📝</div>
+        <div>
+          <div class="card-title">Execution Log</div>
+          <div class="card-subtitle">Step-by-step operations in plain English</div>
+        </div>
+        <div style="margin-left:auto">
+          <button class="btn btn-outline btn-xs" onclick="clearLog()">🗑 Clear</button>
+        </div>
+      </div>
+      <div class="log-container" id="logContainer">
+        <div class="log-entry info">🚀 CPU Scheduling Simulator initialized. Add processes and choose an algorithm to begin.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ==================== LAB PROCEDURE TAB ==================== -->
+<div class="tab-content" id="content-lab">
+<div class="container">
+<div class="tab-panel">
+
+  <div class="algo-hero">
+    <h2>🧪 CPU Scheduling — Lab Procedure</h2>
+    <p>This lab covers all major CPU scheduling algorithms used in Operating Systems. Follow the procedure below to understand theory, implementation, and analysis of each algorithm.</p>
+  </div>
+
+  <!-- Lab Sub-Tabs -->
+  <div class="lab-tabs">
+    <button class="lab-tab-btn active" onclick="switchLabTab('aim')">🎯 Aim & Theory</button>
+    <button class="lab-tab-btn" onclick="switchLabTab('pseudo')">📝 Pseudocode</button>
+    <button class="lab-tab-btn" onclick="switchLabTab('ccode')">💻 C Code</button>
+    <button class="lab-tab-btn" onclick="switchLabTab('io')">📥 Input / Output</button>
+  </div>
+
+  <!-- AIM & THEORY -->
+  <div class="lab-tab-content active" id="lab-aim">
+
+    <div class="lab-section">
+      <h3>🎯 Aim</h3>
+      <p>To study, understand, and implement the following CPU Scheduling algorithms and analyze their performance using metrics like <strong>Turnaround Time (TAT)</strong>, <strong>Waiting Time (WT)</strong>, <strong>Response Time (RT)</strong>, and <strong>CPU Utilization</strong>.</p>
+      <ul>
+        <li>First Come First Served (FCFS)</li>
+        <li>Shortest Job First (SJF) — Non-Preemptive</li>
+        <li>Shortest Remaining Time First (SRTF) — Preemptive SJF</li>
+        <li>Round Robin (RR) with configurable Time Quantum</li>
+        <li>Priority Scheduling (Non-Preemptive)</li>
+        <li>Multi-Level Feedback Queue (MLFQ)</li>
+      </ul>
+    </div>
+
+    <div class="lab-section">
+      <h3>📚 Background Theory</h3>
+      <p>CPU Scheduling is the process by which the operating system decides which process from the ready queue gets to run on the CPU. It is essential for:</p>
+      <ul>
+        <li><strong>Maximizing CPU Utilization</strong> — keeping the CPU as busy as possible</li>
+        <li><strong>Maximizing Throughput</strong> — number of processes completed per unit time</li>
+        <li><strong>Minimizing Turnaround Time</strong> — time from submission to completion</li>
+        <li><strong>Minimizing Waiting Time</strong> — total time spent in the ready queue</li>
+        <li><strong>Minimizing Response Time</strong> — time until the first response is produced</li>
+      </ul>
+    </div>
+
+    <div class="lab-section">
+      <h3>📐 Key Formulae</h3>
+      <div class="formula-box">Completion Time (CT) = Time when process finishes execution</div>
+      <div class="formula-box">Turnaround Time (TAT) = CT − Arrival Time (AT)</div>
+      <div class="formula-box">Waiting Time (WT) = TAT − Burst Time (BT)</div>
+      <div class="formula-box">Response Time (RT) = First CPU allocation time − AT</div>
+      <div class="formula-box">Average TAT = Σ TAT / n &nbsp;|&nbsp; Average WT = Σ WT / n</div>
+      <div class="formula-box">CPU Utilization (%) = (Busy Time / Total Time) × 100</div>
+      <div class="formula-box">Throughput = Number of Processes / Total Time</div>
+    </div>
+
+    <div class="lab-section">
+      <h3>🔍 Algorithm Overview</h3>
+
+      <div style="display:grid;gap:14px">
+        <div class="info-box info-box-blue">
+          <div>🏁</div>
+          <div>
+            <strong>FCFS (First Come First Served):</strong> Processes are executed in the order they arrive. Simple but can cause the "Convoy Effect" — short processes wait behind long ones. Non-preemptive.
+          </div>
+        </div>
+        <div class="info-box info-box-green">
+          <div>⚡</div>
+          <div>
+            <strong>SJF (Shortest Job First):</strong> The process with the smallest burst time runs next. Optimal for minimizing average waiting time. Can cause starvation for longer processes. Non-preemptive.
+          </div>
+        </div>
+        <div class="info-box info-box-yellow">
+          <div>🔄</div>
+          <div>
+            <strong>SRTF (Shortest Remaining Time First):</strong> Preemptive version of SJF. When a new process arrives with a shorter remaining burst time than the currently running process, it preempts it.
+          </div>
+        </div>
+        <div class="info-box info-box-blue">
+          <div>🔁</div>
+          <div>
+            <strong>Round Robin:</strong> Each process gets a fixed time quantum (q). After q units, the process is preempted and placed at the end of the ready queue. Fair and prevents starvation. Widely used in time-sharing systems.
+          </div>
+        </div>
+        <div class="info-box info-box-red">
+          <div>🏆</div>
+          <div>
+            <strong>Priority Scheduling:</strong> Each process is assigned a priority. The process with the highest priority (lowest number) runs first. Can cause starvation; solved using "aging" — gradually increasing priority of waiting processes.
+          </div>
+        </div>
+        <div class="info-box info-box-green">
+          <div>🏢</div>
+          <div>
+            <strong>MLFQ (Multi-Level Feedback Queue):</strong> Uses multiple queues with different priority levels and scheduling algorithms. Processes can move between queues based on their behavior. I/O-bound processes get higher priority; CPU-bound processes move to lower queues.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PSEUDOCODE -->
+  <div class="lab-tab-content" id="lab-pseudo">
+
+    <div class="lab-section">
+      <h3>📝 FCFS Pseudocode</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// First Come First Served (FCFS) Scheduling</span>
+<span class="code-keyword">INPUT:</span> n processes with {PID, Arrival Time (AT), Burst Time (BT)}
+
+<span class="code-keyword">STEP 1:</span> Sort processes by Arrival Time (AT) in ascending order
+<span class="code-keyword">STEP 2:</span> Initialize current_time = 0
+
+<span class="code-keyword">FOR</span> each process P in sorted order:
+    <span class="code-keyword">IF</span> current_time &lt; P.AT:
+        current_time = P.AT  <span class="code-comment">// CPU is idle until process arrives</span>
+    
+    P.CT = current_time + P.BT   <span class="code-comment">// Completion Time</span>
+    P.TAT = P.CT - P.AT          <span class="code-comment">// Turnaround Time</span>
+    P.WT  = P.TAT - P.BT         <span class="code-comment">// Waiting Time</span>
+    P.RT  = current_time - P.AT  <span class="code-comment">// Response Time</span>
+    current_time = P.CT
+
+<span class="code-keyword">OUTPUT:</span> CT, TAT, WT, RT for each process
+        Average TAT = Σ TAT / n
+        Average WT  = Σ WT / n</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📝 SJF Pseudocode (Non-Preemptive)</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// Shortest Job First (SJF) — Non-Preemptive</span>
+<span class="code-keyword">INPUT:</span> n processes with {PID, AT, BT}
+
+<span class="code-keyword">STEP 1:</span> Initialize current_time = 0, completed = 0
+<span class="code-keyword">STEP 2:</span> Mark all processes as unfinished
+
+<span class="code-keyword">WHILE</span> completed &lt; n:
+    <span class="code-comment">// Find all arrived and unfinished processes</span>
+    ready_queue = {P | P.AT &lt;= current_time AND P.finished == false}
+    
+    <span class="code-keyword">IF</span> ready_queue is empty:
+        current_time++  <span class="code-comment">// CPU idle</span>
+        <span class="code-keyword">CONTINUE</span>
+    
+    <span class="code-comment">// Select process with minimum burst time</span>
+    selected = process in ready_queue with min(BT)
+    
+    selected.CT  = current_time + selected.BT
+    selected.TAT = selected.CT - selected.AT
+    selected.WT  = selected.TAT - selected.BT
+    selected.RT  = current_time - selected.AT
+    current_time = selected.CT
+    selected.finished = true
+    completed++
+
+<span class="code-keyword">OUTPUT:</span> CT, TAT, WT, RT for each process</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📝 Round Robin Pseudocode</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// Round Robin Scheduling with Time Quantum q</span>
+<span class="code-keyword">INPUT:</span> n processes with {PID, AT, BT}, time quantum q
+
+<span class="code-keyword">STEP 1:</span> Initialize current_time = 0
+         remaining[i] = BT[i] for all processes
+         queue = []
+
+<span class="code-keyword">STEP 2:</span> Add processes arriving at time 0 to queue
+
+<span class="code-keyword">WHILE</span> processes remain:
+    <span class="code-keyword">IF</span> queue is empty:
+        current_time = next_arrival_time
+        Add arriving processes to queue
+        <span class="code-keyword">CONTINUE</span>
+    
+    P = dequeue first process from queue
+    
+    exec_time = min(q, remaining[P])
+    current_time += exec_time
+    remaining[P] -= exec_time
+    
+    <span class="code-comment">// Add newly arrived processes during this slice</span>
+    Add processes that arrived during [old_time, current_time] to queue
+    
+    <span class="code-keyword">IF</span> remaining[P] == 0:
+        P.CT = current_time
+        P.TAT = P.CT - P.AT
+        P.WT  = P.TAT - P.BT
+    <span class="code-keyword">ELSE</span>:
+        Enqueue P at back of queue  <span class="code-comment">// Process not done, re-queue</span>
+
+<span class="code-keyword">OUTPUT:</span> CT, TAT, WT for each process</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📝 MLFQ Pseudocode</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// Multi-Level Feedback Queue (MLFQ)</span>
+<span class="code-keyword">INPUT:</span> n processes, 3 queues: Q1(RR q=2), Q2(RR q=4), Q3(FCFS)
+
+<span class="code-keyword">STEP 1:</span> Place all new processes in Q1 (highest priority)
+
+<span class="code-keyword">WHILE</span> processes remain:
+    <span class="code-keyword">IF</span> Q1 not empty:
+        Run front process with quantum q=2
+        <span class="code-keyword">IF</span> process completes: mark done
+        <span class="code-keyword">ELSE</span>: move process to Q2
+    
+    <span class="code-keyword">ELSE IF</span> Q2 not empty:
+        Run front process with quantum q=4
+        <span class="code-keyword">IF</span> process completes: mark done
+        <span class="code-keyword">ELSE</span>: move process to Q3
+    
+    <span class="code-keyword">ELSE IF</span> Q3 not empty:
+        Run front process to completion (FCFS)
+        Mark done
+    
+    <span class="code-keyword">IF</span> new process arrives:
+        Add to Q1 (preempts lower-priority queues)
+
+<span class="code-keyword">OUTPUT:</span> CT, TAT, WT, RT for each process</pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- C CODE -->
+  <div class="lab-tab-content" id="lab-ccode">
+
+    <div class="lab-section">
+      <h3>💻 FCFS in C</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// FCFS CPU Scheduling Algorithm in C</span>
+<span class="code-keyword">#include</span> <span class="code-string">&lt;stdio.h&gt;</span>
+<span class="code-keyword">#include</span> <span class="code-string">&lt;stdlib.h&gt;</span>
+
+<span class="code-keyword">typedef struct</span> {
+    <span class="code-type">char</span>  pid[<span class="code-number">10</span>];
+    <span class="code-type">int</span>   at, bt, ct, tat, wt, rt;
+} <span class="code-type">Process</span>;
+
+<span class="code-type">int</span> <span class="code-func">cmpArrival</span>(<span class="code-keyword">const void</span> *a, <span class="code-keyword">const void</span> *b) {
+    <span class="code-keyword">return</span> ((<span class="code-type">Process</span>*)a)->at - ((<span class="code-type">Process</span>*)b)->at;
+}
+
+<span class="code-type">void</span> <span class="code-func">fcfs</span>(<span class="code-type">Process</span> p[], <span class="code-type">int</span> n) {
+    <span class="code-func">qsort</span>(p, n, <span class="code-keyword">sizeof</span>(<span class="code-type">Process</span>), cmpArrival);
+    
+    <span class="code-type">int</span> current = <span class="code-number">0</span>;
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++) {
+        <span class="code-keyword">if</span> (current &lt; p[i].at) current = p[i].at;
+        p[i].rt  = current - p[i].at;
+        p[i].ct  = current + p[i].bt;
+        p[i].tat = p[i].ct - p[i].at;
+        p[i].wt  = p[i].tat - p[i].bt;
+        current  = p[i].ct;
+    }
+}
+
+<span class="code-type">void</span> <span class="code-func">printResults</span>(<span class="code-type">Process</span> p[], <span class="code-type">int</span> n) {
+    <span class="code-func">printf</span>(<span class="code-string">"\n%-6s %-6s %-6s %-6s %-6s %-6s %-6s\n"</span>,
+           <span class="code-string">"PID"</span>, <span class="code-string">"AT"</span>, <span class="code-string">"BT"</span>, <span class="code-string">"CT"</span>, <span class="code-string">"TAT"</span>, <span class="code-string">"WT"</span>, <span class="code-string">"RT"</span>);
+    <span class="code-func">printf</span>(<span class="code-string">"----------------------------------------------\n"</span>);
+    
+    <span class="code-type">float</span> sumTAT = <span class="code-number">0</span>, sumWT = <span class="code-number">0</span>;
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++) {
+        <span class="code-func">printf</span>(<span class="code-string">"%-6s %-6d %-6d %-6d %-6d %-6d %-6d\n"</span>,
+               p[i].pid, p[i].at, p[i].bt, p[i].ct,
+               p[i].tat, p[i].wt, p[i].rt);
+        sumTAT += p[i].tat;
+        sumWT  += p[i].wt;
+    }
+    <span class="code-func">printf</span>(<span class="code-string">"\nAverage TAT = %.2f\n"</span>, sumTAT / n);
+    <span class="code-func">printf</span>(<span class="code-string">"Average WT  = %.2f\n"</span>, sumWT  / n);
+}
+
+<span class="code-type">int</span> <span class="code-func">main</span>() {
+    <span class="code-type">int</span> n;
+    <span class="code-func">printf</span>(<span class="code-string">"Enter number of processes: "</span>);
+    <span class="code-func">scanf</span>(<span class="code-string">"%d"</span>, &amp;n);
+    
+    <span class="code-type">Process</span> p[n];
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++) {
+        <span class="code-func">printf</span>(<span class="code-string">"P%d - Arrival Time, Burst Time: "</span>, i+<span class="code-number">1</span>);
+        <span class="code-func">sprintf</span>(p[i].pid, <span class="code-string">"P%d"</span>, i+<span class="code-number">1</span>);
+        <span class="code-func">scanf</span>(<span class="code-string">"%d %d"</span>, &amp;p[i].at, &amp;p[i].bt);
+    }
+    
+    <span class="code-func">fcfs</span>(p, n);
+    <span class="code-func">printResults</span>(p, n);
+    <span class="code-keyword">return</span> <span class="code-number">0</span>;
+}</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>💻 Round Robin in C</h3>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre>
+<span class="code-comment">// Round Robin CPU Scheduling in C</span>
+<span class="code-keyword">#include</span> <span class="code-string">&lt;stdio.h&gt;</span>
+<span class="code-keyword">#include</span> <span class="code-string">&lt;string.h&gt;</span>
+
+<span class="code-keyword">#define</span> <span class="code-number">MAX</span> <span class="code-number">100</span>
+
+<span class="code-type">void</span> <span class="code-func">roundRobin</span>(<span class="code-type">int</span> n, <span class="code-type">int</span> at[], <span class="code-type">int</span> bt[], <span class="code-type">int</span> q) {
+    <span class="code-type">int</span> rem[MAX], ct[MAX], wt[MAX], tat[MAX];
+    <span class="code-type">int</span> queue[MAX*<span class="code-number">10</span>], head = <span class="code-number">0</span>, tail = <span class="code-number">0</span>;
+    <span class="code-type">int</span> inQueue[MAX] = {<span class="code-number">0</span>};
+    <span class="code-type">int</span> done = <span class="code-number">0</span>, t = <span class="code-number">0</span>;
+    
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++) rem[i] = bt[i];
+    
+    <span class="code-comment">// Enqueue processes arriving at time 0</span>
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++)
+        <span class="code-keyword">if</span> (at[i] == <span class="code-number">0</span>) { queue[tail++] = i; inQueue[i] = <span class="code-number">1</span>; }
+    
+    <span class="code-keyword">while</span> (done &lt; n) {
+        <span class="code-keyword">if</span> (head == tail) { t++; <span class="code-keyword">continue</span>; } <span class="code-comment">// Idle</span>
+        
+        <span class="code-type">int</span> i = queue[head++];
+        <span class="code-type">int</span> exec = (rem[i] &lt; q) ? rem[i] : q;
+        <span class="code-type">int</span> start = t;
+        
+        t += exec;
+        rem[i] -= exec;
+        
+        <span class="code-comment">// Enqueue newly arrived</span>
+        <span class="code-keyword">for</span> (<span class="code-type">int</span> j = <span class="code-number">0</span>; j &lt; n; j++)
+            <span class="code-keyword">if</span> (!inQueue[j] &amp;&amp; at[j] &lt;= t &amp;&amp; at[j] &gt; start) {
+                queue[tail++] = j; inQueue[j] = <span class="code-number">1</span>;
+            }
+        
+        <span class="code-keyword">if</span> (rem[i] == <span class="code-number">0</span>) {
+            ct[i] = t;
+            tat[i] = ct[i] - at[i];
+            wt[i]  = tat[i] - bt[i];
+            done++;
+        } <span class="code-keyword">else</span> {
+            queue[tail++] = i; <span class="code-comment">// Re-queue</span>
+        }
+    }
+    
+    <span class="code-func">printf</span>(<span class="code-string">"\n%-4s %-4s %-4s %-4s %-5s %-4s\n"</span>,
+           <span class="code-string">"PID"</span>, <span class="code-string">"AT"</span>, <span class="code-string">"BT"</span>, <span class="code-string">"CT"</span>, <span class="code-string">"TAT"</span>, <span class="code-string">"WT"</span>);
+    
+    <span class="code-type">float</span> avgTAT = <span class="code-number">0</span>, avgWT = <span class="code-number">0</span>;
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i = <span class="code-number">0</span>; i &lt; n; i++) {
+        <span class="code-func">printf</span>(<span class="code-string">"P%-3d %-4d %-4d %-4d %-5d %-4d\n"</span>,
+               i+<span class="code-number">1</span>, at[i], bt[i], ct[i], tat[i], wt[i]);
+        avgTAT += tat[i]; avgWT += wt[i];
+    }
+    <span class="code-func">printf</span>(<span class="code-string">"Avg TAT=%.2f, Avg WT=%.2f\n"</span>, avgTAT/n, avgWT/n);
+}
+
+<span class="code-type">int</span> <span class="code-func">main</span>() {
+    <span class="code-type">int</span> n, q;
+    <span class="code-func">printf</span>(<span class="code-string">"Processes, Quantum: "</span>); <span class="code-func">scanf</span>(<span class="code-string">"%d %d"</span>, &amp;n, &amp;q);
+    <span class="code-type">int</span> at[n], bt[n];
+    <span class="code-keyword">for</span> (<span class="code-type">int</span> i=<span class="code-number">0</span>; i&lt;n; i++) {
+        <span class="code-func">printf</span>(<span class="code-string">"P%d AT BT: "</span>, i+<span class="code-number">1</span>); <span class="code-func">scanf</span>(<span class="code-string">"%d %d"</span>, &at[i], &bt[i]);
+    }
+    <span class="code-func">roundRobin</span>(n, at, bt, q);
+    <span class="code-keyword">return</span> <span class="code-number">0</span>;
+}</pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- INPUT / OUTPUT -->
+  <div class="lab-tab-content" id="lab-io">
+
+    <div class="lab-section">
+      <h3>📥 Sample Input</h3>
+      <div class="code-block">
+        <pre>
+Number of Processes: 4
+
+Process   Arrival Time   Burst Time   Priority
+  P1          0              8           3
+  P2          1              4           1
+  P3          2              9           4
+  P4          3              5           2
+
+For Round Robin: Time Quantum (q) = 2</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📤 Expected Output — FCFS</h3>
+      <div class="code-block">
+        <pre>
+Algorithm: First Come First Served (FCFS)
+
+PID    AT    BT    CT    TAT   WT    RT
+--------------------------------------
+P1      0     8     8     8     0     0
+P2      1     4    12    11     7     7
+P3      2     9    21    19    10    10
+P4      3     5    26    23    18    18
+
+Average Turnaround Time  = 15.25
+Average Waiting Time     = 8.75
+CPU Utilization          = 100%
+Throughput               = 0.154 processes/unit
+
+Gantt Chart:
+|  P1  |  P2  |      P3      | P4  |
+0      8     12             21    26</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📤 Expected Output — Round Robin (q=2)</h3>
+      <div class="code-block">
+        <pre>
+Algorithm: Round Robin (q=2)
+
+PID    AT    BT    CT    TAT   WT    RT
+--------------------------------------
+P1      0     8    22    22    14     0
+P2      1     4    13    12     8     1
+P3      2     9    26    24    15     2
+P4      3     5    20    17    12     3
+
+Average Turnaround Time  = 18.75
+Average Waiting Time     = 12.25
+CPU Utilization          = 100%
+
+Gantt Chart:
+|P1|P2|P3|P4|P1|P2|P3|P4|P1|P3|P4|P1|P3  |P1|P3|
+0  2  4  6  8  10 12 13 15 17 19 20 21 23  24 25 26</pre>
+      </div>
+    </div>
+
+    <div class="lab-section">
+      <h3>📊 Observations & Analysis</h3>
+      <ul>
+        <li>FCFS is simple but suffers from the <strong>Convoy Effect</strong> — short processes wait for long ones.</li>
+        <li>SJF gives the <strong>minimum average waiting time</strong> among non-preemptive algorithms.</li>
+        <li>SRTF (preemptive SJF) can lead to <strong>starvation</strong> of longer processes.</li>
+        <li>Round Robin ensures <strong>fairness</strong> but has higher average TAT than SJF.</li>
+        <li>Smaller quantum in RR → better response time but more context switches (overhead).</li>
+        <li>MLFQ provides a <strong>balanced approach</strong> — favors interactive/IO-bound processes.</li>
+      </ul>
+    </div>
+
+    <div class="lab-section">
+      <h3>✅ Result</h3>
+      <p>All four CPU scheduling algorithms were successfully implemented and simulated. The Gantt chart was drawn for each algorithm. The turnaround time, waiting time, and response time for each process were calculated. MLFQ provided the best balance between response time and throughput among all tested algorithms for the given workload.</p>
+    </div>
+
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ==================== COMPARE TAB ==================== -->
+<div class="tab-content" id="content-compare">
+<div class="container">
+<div class="tab-panel">
+
+  <div class="algo-hero">
+    <h2>📊 Algorithm Comparison</h2>
+    <p>Compare all CPU scheduling algorithms side-by-side based on key characteristics and performance criteria.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header">
+      <div class="icon icon-blue">📋</div>
+      <div class="card-title">Scheduling Algorithm Comparison Table</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Preemptive?</th>
+            <th>Starvation?</th>
+            <th>Avg WT</th>
+            <th>Overhead</th>
+            <th>Fairness</th>
+            <th>Best For</th>
+            <th>Complexity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-blue">FCFS</span></td>
+            <td>❌ No</td>
+            <td>❌ No</td>
+            <td>High</td>
+            <td>Very Low</td>
+            <td>⚠️ Medium</td>
+            <td>Batch Systems</td>
+            <td>O(n log n)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">SJF</span></td>
+            <td>❌ No</td>
+            <td>✅ Yes</td>
+            <td>Optimal</td>
+            <td>Low</td>
+            <td>❌ Low</td>
+            <td>Batch, Low WT</td>
+            <td>O(n²)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-cyan">SRTF</span></td>
+            <td>✅ Yes</td>
+            <td>✅ Yes</td>
+            <td>Min Possible</td>
+            <td>High</td>
+            <td>❌ Low</td>
+            <td>Minimize TAT</td>
+            <td>O(n²)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">Round Robin</span></td>
+            <td>✅ Yes</td>
+            <td>❌ No</td>
+            <td>Moderate</td>
+            <td>Moderate</td>
+            <td>✅ High</td>
+            <td>Time-Sharing</td>
+            <td>O(n)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">Priority</span></td>
+            <td>❌ No</td>
+            <td>✅ Yes</td>
+            <td>Varies</td>
+            <td>Low</td>
+            <td>⚠️ Medium</td>
+            <td>Real-Time</td>
+            <td>O(n log n)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-cyan">MLFQ</span></td>
+            <td>✅ Yes</td>
+            <td>Rare</td>
+            <td>Good</td>
+            <td>High</td>
+            <td>✅ High</td>
+            <td>General OS</td>
+            <td>O(n log n)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <div class="card-header">
+        <div class="icon icon-green">✅</div>
+        <div class="card-title">When to Use Which?</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="info-box info-box-blue"><div>🏁</div><div><strong>FCFS:</strong> Simple batch systems, when fairness matters more than speed, easy to implement.</div></div>
+        <div class="info-box info-box-green"><div>⚡</div><div><strong>SJF:</strong> When you know burst times in advance, batch processing where minimizing WT is key.</div></div>
+        <div class="info-box info-box-yellow"><div>🔁</div><div><strong>Round Robin:</strong> Interactive/time-sharing systems, multi-user environments, desktop OSes.</div></div>
+        <div class="info-box info-box-red"><div>🏢</div><div><strong>MLFQ:</strong> Modern general-purpose OSes (Linux, Windows, macOS) — best overall trade-off.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="icon icon-yellow">⚠️</div>
+        <div class="card-title">Common Problems & Solutions</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="info-box info-box-red">
+          <div>🚌</div>
+          <div><strong>Convoy Effect (FCFS):</strong> Short processes wait behind one long process. Solution: Use SJF or RR.</div>
+        </div>
+        <div class="info-box info-box-red">
+          <div>🥺</div>
+          <div><strong>Starvation (SJF/Priority):</strong> Long/low-priority processes never get CPU. Solution: Aging — increase priority over time.</div>
+        </div>
+        <div class="info-box info-box-yellow">
+          <div>⏱️</div>
+          <div><strong>Quantum Selection (RR):</strong> Too small → too many context switches. Too large → degrades to FCFS. Rule: q should be slightly larger than typical CPU burst.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- ==================== FAQ TAB ==================== -->
+<div class="tab-content" id="content-faq">
+<div class="container">
+<div class="tab-panel">
+
+  <div class="algo-hero">
+    <h2>❓ Frequently Asked Questions</h2>
+    <p>Common questions about CPU scheduling algorithms, answered clearly for OS lab exams and viva voce.</p>
+  </div>
+
+  <div id="faqList">
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is CPU Scheduling and why is it needed?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        CPU Scheduling is the process of deciding which process in the ready queue gets to run on the CPU next. It is needed because multiple processes compete for the CPU simultaneously, and the OS must manage this efficiently to maximize CPU utilization, minimize waiting time, and ensure fairness among processes.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is the difference between preemptive and non-preemptive scheduling?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        In <strong>Non-Preemptive</strong> scheduling, once a process gets the CPU, it runs to completion (or until it voluntarily releases). Examples: FCFS, SJF, Priority (NP). In <strong>Preemptive</strong> scheduling, the CPU can be taken away from a process and given to another. Examples: SRTF, Round Robin, Priority (P). Preemptive scheduling gives better response times but has higher overhead due to context switching.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is the Convoy Effect in FCFS?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        The Convoy Effect occurs in FCFS when a long CPU-bound process holds the CPU while many short processes wait in the queue. This causes poor CPU utilization and high average waiting time. It's analogous to being stuck behind a slow truck on a single-lane road. The solution is to use algorithms like SJF or Round Robin.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        Why is SJF said to be optimal?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        SJF is proven to give the <strong>minimum average waiting time</strong> among all non-preemptive scheduling algorithms. This is because by running shorter jobs first, we minimize the number of jobs that have to wait behind each job. However, it requires knowing burst times in advance, which is impractical in real systems. Practical implementations use past behavior (exponential averaging) to estimate burst times.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is starvation and how is it solved?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        Starvation occurs when a process waits indefinitely because higher-priority or shorter processes keep arriving and taking CPU time. This happens in SJF (long processes starve) and Priority Scheduling (low-priority processes starve). The solution is <strong>Aging</strong> — gradually increasing the priority of waiting processes so they eventually get scheduled.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        How do you choose the right time quantum for Round Robin?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        The time quantum (q) should be: <br>• <strong>Not too small</strong>: Otherwise, most time is spent on context switching overhead.<br>• <strong>Not too large</strong>: Otherwise, it degrades to FCFS behavior.<br>• <strong>Rule of thumb</strong>: Set q slightly larger than the typical CPU burst time, so that ~80% of CPU bursts are shorter than q. In practice, modern systems use quantum values of 10–100 milliseconds.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is MLFQ and how does it work?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        Multi-Level Feedback Queue uses multiple queues with different priority levels. New processes enter the highest-priority queue. If a process uses its full time quantum, it's moved to a lower-priority queue (penalizing CPU-bound processes). If it yields CPU early (I/O-bound), it stays at high priority. This automatically classifies processes by their behavior — I/O-bound processes (interactive) get better response times, while CPU-bound processes gradually move to lower-priority FCFS queues. MLFQ is used in modern OSes like Linux and Windows.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is Response Time vs Turnaround Time vs Waiting Time?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        • <strong>Turnaround Time (TAT)</strong>: Total time from process arrival to completion. TAT = CT − AT<br>• <strong>Waiting Time (WT)</strong>: Time spent in the ready queue waiting for CPU. WT = TAT − BT<br>• <strong>Response Time (RT)</strong>: Time from arrival to first CPU allocation. RT = First CPU time − AT<br><br>Response Time is important for interactive systems. Turnaround Time matters for batch systems. Waiting Time is a measure of CPU scheduling efficiency.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        What is the difference between throughput and CPU utilization?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        • <strong>CPU Utilization</strong>: Percentage of time the CPU is busy executing processes (not idle). Formula: (Total busy time / Total elapsed time) × 100%. Goal: Keep this as close to 100% as possible.<br>• <strong>Throughput</strong>: Number of processes completed per unit time. Formula: n / Total time. Higher throughput = more work done per unit time.
+      </div>
+    </div>
+
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        Can burst time be predicted in real operating systems?
+        <span class="faq-toggle">+</span>
+      </div>
+      <div class="faq-answer">
+        Burst time cannot be known exactly in advance. Real OSes estimate it using <strong>Exponential Averaging</strong>:<br><br>τ(n+1) = α × t(n) + (1-α) × τ(n)<br><br>Where τ(n+1) is the predicted next burst, t(n) is the actual last burst, and α (0 ≤ α ≤ 1) controls how much weight is given to recent vs. old history. α = 0.5 is commonly used. This technique is used in modern MLFQ-based schedulers.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Message here</span>
+</div>
+
+<script>
+// ====================== DATA ======================
+let processes = [];
+let selectedAlgo = 'fcfs';
+let processColors = [
+  'color-p0','color-p1','color-p2','color-p3',
+  'color-p4','color-p5','color-p6','color-p7'
+];
+let dotColors = ['dot-p0','dot-p1','dot-p2','dot-p3','dot-p4','dot-p5','dot-p6','dot-p7'];
+let hexColors = ['#4f8ef7','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#f97316'];
+let ganttData = [];
+let results = [];
+
+// ====================== TAB SWITCHING ======================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('content-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function switchLabTab(tab) {
+  document.querySelectorAll('.lab-tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.lab-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('lab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ====================== ALGORITHM SELECTION ======================
+function selectAlgo(algo) {
+  selectedAlgo = algo;
+  document.querySelectorAll('.algo-card').forEach(el => el.classList.remove('selected'));
+  document.getElementById('algo-' + algo).classList.add('selected');
+  document.getElementById('quantumGroup').classList.toggle('show', algo === 'rr' || algo === 'mlfq');
+  document.getElementById('mlfqConfig').classList.toggle('show', algo === 'mlfq');
+  log(`Algorithm selected: <strong>${getAlgoName(algo)}</strong>`, 'info');
+}
+
+function getAlgoName(algo) {
+  const names = {
+    fcfs: 'First Come First Served (FCFS)',
+    sjf: 'Shortest Job First (SJF)',
+    srtf: 'Shortest Remaining Time First (SRTF)',
+    rr: 'Round Robin (RR)',
+    priority: 'Priority Scheduling',
+    mlfq: 'Multi-Level Feedback Queue (MLFQ)'
+  };
+  return names[algo] || algo.toUpperCase();
+}
+
+// ====================== PROCESS MANAGEMENT ======================
+function addProcess() {
+  const pid = document.getElementById('pidInput').value.trim();
+  const at = parseInt(document.getElementById('arrInput').value);
+  const bt = parseInt(document.getElementById('burstInput').value);
+  const priority = parseInt(document.getElementById('priorityInput').value);
+
+  if (!pid) { showToast('Please enter a Process ID', 'error'); return; }
+  if (isNaN(at) || at < 0) { showToast('Arrival time must be ≥ 0', 'error'); return; }
+  if (isNaN(bt) || bt < 1) { showToast('Burst time must be ≥ 1', 'error'); return; }
+  if (processes.find(p => p.pid === pid)) { showToast(`Process ${pid} already exists`, 'error'); return; }
+  if (processes.length >= 8) { showToast('Maximum 8 processes supported', 'error'); return; }
+
+  const colorIdx = processes.length % 8;
+  processes.push({ pid, at, bt, priority, colorIdx });
+  
+  // Auto-increment PID
+  const match = pid.match(/^([A-Za-z]+)(\d+)$/);
+  if (match) {
+    document.getElementById('pidInput').value = match[1] + (parseInt(match[2]) + 1);
+  }
+
+  renderProcessTable();
+  log(`Process <strong>${pid}</strong> added — AT: ${at}, BT: ${bt}, Priority: ${priority}`, 'success');
+  showToast(`Process ${pid} added!`, 'success');
+}
+
+function removeProcess(pid) {
+  processes = processes.filter(p => p.pid !== pid);
+  // Reassign color indices
+  processes.forEach((p, i) => p.colorIdx = i % 8);
+  renderProcessTable();
+  log(`Process <strong>${pid}</strong> removed`, 'warning');
+}
+
+function renderProcessTable() {
+  const tbody = document.getElementById('processTableBody');
+  const legend = document.getElementById('processLegend');
+  document.getElementById('processCount').textContent = `${processes.length} process${processes.length !== 1 ? 'es' : ''}`;
+
+  if (processes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);padding:20px;text-align:center;">No processes added yet</td></tr>';
+    legend.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = processes.map((p, i) => `
+    <tr class="slide-in">
+      <td><span class="pid-badge" style="background:${hexColors[p.colorIdx]}22;color:${hexColors[p.colorIdx]};border:1px solid ${hexColors[p.colorIdx]}44">${p.pid}</span></td>
+      <td>${p.at}</td>
+      <td>${p.bt}</td>
+      <td>${p.priority}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="removeProcess('${p.pid}')">✕</button></td>
+    </tr>
+  `).join('');
+
+  legend.innerHTML = processes.map(p => `
+    <div class="legend-item">
+      <div class="legend-dot ${dotColors[p.colorIdx]}"></div>
+      <span>${p.pid}</span>
+    </div>
+  `).join('');
+}
+
+function loadSampleData() {
+  processes = [];
+  const samples = [
+    { pid: 'P1', at: 0, bt: 8, priority: 3 },
+    { pid: 'P2', at: 1, bt: 4, priority: 1 },
+    { pid: 'P3', at: 2, bt: 9, priority: 4 },
+    { pid: 'P4', at: 3, bt: 5, priority: 2 },
+  ];
+  samples.forEach((s, i) => processes.push({ ...s, colorIdx: i }));
+  renderProcessTable();
+  log('Sample data loaded: 4 processes (P1–P4)', 'info');
+  showToast('Sample data loaded!', 'success');
+}
+
+function clearAll() {
+  processes = [];
+  ganttData = [];
+  results = [];
+  renderProcessTable();
+  document.getElementById('ganttSection').innerHTML = `<div class="empty-state"><span class="empty-icon">📊</span><div>Add processes and run simulation to see the Gantt chart</div></div>`;
+  document.getElementById('ganttSubtitle').textContent = 'Run simulation to see the Gantt chart';
+  document.getElementById('statsCard').style.display = 'none';
+  document.getElementById('resultsCard').style.display = 'none';
+  document.getElementById('queueCard').style.display = 'none';
+  document.getElementById('animateBtn').style.display = 'none';
+  log('All processes cleared', 'warning');
+  showToast('Cleared!', 'info');
+}
+
+// ====================== SCHEDULING ALGORITHMS ======================
+
+function runSimulation() {
+  if (processes.length === 0) {
+    showToast('Please add at least one process', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('runBtn');
+  btn.innerHTML = '<span class="spinner"></span> Running...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    clearLogEntries();
+    log(`Starting simulation: <strong>${getAlgoName(selectedAlgo)}</strong>`, 'info');
+
+    switch (selectedAlgo) {
+      case 'fcfs': runFCFS(); break;
+      case 'sjf': runSJF(); break;
+      case 'srtf': runSRTF(); break;
+      case 'rr': runRR(); break;
+      case 'priority': runPriority(); break;
+      case 'mlfq': runMLFQ(); break;
+    }
+
+    btn.innerHTML = '▶ Run Simulation';
+    btn.disabled = false;
+    document.getElementById('animateBtn').style.display = 'inline-flex';
+  }, 300);
+}
+
+function runFCFS() {
+  let procs = processes.map(p => ({...p})).sort((a, b) => a.at - b.at);
+  let t = 0;
+  ganttData = [];
+  results = [];
+
+  log('Sorting processes by Arrival Time...', 'step');
+
+  for (let p of procs) {
+    if (t < p.at) {
+      ganttData.push({ pid: 'IDLE', start: t, end: p.at, colorIdx: -1 });
+      log(`⏳ CPU idle from t=${t} to t=${p.at}`, 'warning');
+      t = p.at;
+    }
+    const start = t;
+    p.ct = t + p.bt;
+    p.tat = p.ct - p.at;
+    p.wt = p.tat - p.bt;
+    p.rt = t - p.at;
+    ganttData.push({ pid: p.pid, start: t, end: p.ct, colorIdx: p.colorIdx });
+    log(`⚙️ Executing <strong>${p.pid}</strong> from t=${t} to t=${p.ct} (BT=${p.bt})`, 'event');
+    t = p.ct;
+    results.push(p);
+  }
+
+  renderResults();
+  log('✅ FCFS Simulation complete!', 'success');
+}
+
+function runSJF() {
+  let procs = processes.map(p => ({...p, done: false}));
+  let t = 0, completed = 0;
+  ganttData = [];
+  results = [];
+
+  log('Running Shortest Job First (Non-Preemptive)...', 'step');
+
+  while (completed < procs.length) {
+    let available = procs.filter(p => !p.done && p.at <= t);
+    
+    if (available.length === 0) {
+      let nextAt = Math.min(...procs.filter(p => !p.done).map(p => p.at));
+      ganttData.push({ pid: 'IDLE', start: t, end: nextAt, colorIdx: -1 });
+      log(`⏳ CPU idle from t=${t} to t=${nextAt}`, 'warning');
+      t = nextAt;
+      continue;
+    }
+
+    // Pick shortest burst; tie-break by arrival
+    let sel = available.reduce((best, p) => 
+      (p.bt < best.bt || (p.bt === best.bt && p.at < best.at)) ? p : best
+    );
+
+    log(`📋 Ready queue: [${available.map(p => `${p.pid}(BT:${p.bt})`).join(', ')}] → Selected: <strong>${sel.pid}</strong> (shortest BT=${sel.bt})`, 'step');
+
+    sel.rt = t - sel.at;
+    sel.ct = t + sel.bt;
+    sel.tat = sel.ct - sel.at;
+    sel.wt = sel.tat - sel.bt;
+    ganttData.push({ pid: sel.pid, start: t, end: sel.ct, colorIdx: sel.colorIdx });
+    log(`⚙️ Executing <strong>${sel.pid}</strong> from t=${t} to t=${sel.ct}`, 'event');
+    t = sel.ct;
+    sel.done = true;
+    completed++;
+    results.push(sel);
+  }
+
+  renderResults();
+  log('✅ SJF Simulation complete!', 'success');
+}
+
+function runSRTF() {
+  let procs = processes.map(p => ({...p, rem: p.bt, done: false, started: false}));
+  let t = 0;
+  let total = procs.reduce((s, p) => s + p.bt, 0);
+  let maxTime = Math.max(...procs.map(p => p.at)) + total;
+  ganttData = [];
+  results = [];
+
+  log('Running Shortest Remaining Time First (Preemptive)...', 'step');
+
+  let prev = null;
+  let blockStart = 0;
+
+  while (results.length < procs.length) {
+    let available = procs.filter(p => !p.done && p.at <= t);
+    
+    if (available.length === 0) {
+      if (prev !== null) {
+        if (t > blockStart) ganttData.push({ pid: prev, start: blockStart, end: t, colorIdx: getColorIdx(prev) });
+        prev = null;
+      }
+      let nextAt = Math.min(...procs.filter(p => !p.done).map(p => p.at));
+      ganttData.push({ pid: 'IDLE', start: t, end: nextAt, colorIdx: -1 });
+      t = nextAt;
+      blockStart = t;
+      continue;
+    }
+
+    let sel = available.reduce((best, p) =>
+      (p.rem < best.rem || (p.rem === best.rem && p.at < best.at)) ? p : best
+    );
+
+    if (!sel.started) {
+      sel.rt = t - sel.at;
+      sel.started = true;
+    }
+
+    if (prev !== sel.pid) {
+      if (prev !== null && t > blockStart) {
+        ganttData.push({ pid: prev, start: blockStart, end: t, colorIdx: getColorIdx(prev) });
+      }
+      if (prev !== sel.pid) log(`🔄 Context switch → <strong>${sel.pid}</strong> at t=${t} (rem=${sel.rem})`, 'event');
+      blockStart = t;
+      prev = sel.pid;
+    }
+
+    sel.rem--;
+    t++;
+
+    if (sel.rem === 0) {
+      ganttData.push({ pid: sel.pid, start: blockStart, end: t, colorIdx: sel.colorIdx });
+      prev = null;
+      blockStart = t;
+      sel.ct = t;
+      sel.tat = sel.ct - sel.at;
+      sel.wt = sel.tat - sel.bt;
+      sel.done = true;
+      results.push(sel);
+      log(`✅ <strong>${sel.pid}</strong> completed at t=${t} (TAT=${sel.tat}, WT=${sel.wt})`, 'success');
+    }
+  }
+
+  renderResults();
+  log('✅ SRTF Simulation complete!', 'success');
+}
+
+function runRR() {
+  const q = parseInt(document.getElementById('quantumInput').value) || 2;
+  let procs = processes.map(p => ({...p, rem: p.bt, done: false, started: false}));
+  let t = 0;
+  let queue = [];
+  ganttData = [];
+  results = [];
+  let arrived = new Set();
+
+  log(`Running Round Robin with quantum q=${q}...`, 'step');
+
+  // Initial arrivals at t=0
+  procs.filter(p => p.at <= 0).forEach(p => { queue.push(p); arrived.add(p.pid); });
+
+  while (results.length < procs.length) {
+    if (queue.length === 0) {
+      let nextAt = Math.min(...procs.filter(p => !p.done && !arrived.has(p.pid)).map(p => p.at));
+      ganttData.push({ pid: 'IDLE', start: t, end: nextAt, colorIdx: -1 });
+      log(`⏳ CPU idle from t=${t} to t=${nextAt}`, 'warning');
+      t = nextAt;
+      procs.filter(p => !p.done && p.at <= t && !arrived.has(p.pid)).forEach(p => {
+        queue.push(p); arrived.add(p.pid);
+      });
+      continue;
+    }
+
+    let p = queue.shift();
+    if (!p.started) { p.rt = t - p.at; p.started = true; }
+    
+    let exec = Math.min(q, p.rem);
+    let start = t;
+    t += exec;
+    p.rem -= exec;
+
+    // Check for new arrivals during this slice
+    procs.filter(proc => !proc.done && proc.at > start && proc.at <= t && !arrived.has(proc.pid))
+         .forEach(proc => { queue.push(proc); arrived.add(proc.pid); });
+
+    ganttData.push({ pid: p.pid, start, end: t, colorIdx: p.colorIdx });
+    log(`⚙️ <strong>${p.pid}</strong> runs t=${start}→t=${t} (rem=${p.rem}, q=${q})`, 'step');
+
+    if (p.rem === 0) {
+      p.ct = t;
+      p.tat = p.ct - p.at;
+      p.wt = p.tat - p.bt;
+      p.done = true;
+      results.push(p);
+      log(`✅ <strong>${p.pid}</strong> completed at t=${t}`, 'success');
+    } else {
+      queue.push(p);
+      log(`🔁 <strong>${p.pid}</strong> re-queued (rem=${p.rem})`, 'warning');
+    }
+  }
+
+  renderResults();
+  log(`✅ Round Robin (q=${q}) Simulation complete!`, 'success');
+}
+
+function runPriority() {
+  let procs = processes.map(p => ({...p, done: false}));
+  let t = 0, completed = 0;
+  ganttData = [];
+  results = [];
+
+  log('Running Priority Scheduling (Non-Preemptive)...', 'step');
+
+  while (completed < procs.length) {
+    let available = procs.filter(p => !p.done && p.at <= t);
+
+    if (available.length === 0) {
+      let nextAt = Math.min(...procs.filter(p => !p.done).map(p => p.at));
+      ganttData.push({ pid: 'IDLE', start: t, end: nextAt, colorIdx: -1 });
+      log(`⏳ CPU idle from t=${t} to t=${nextAt}`, 'warning');
+      t = nextAt;
+      continue;
+    }
+
+    let sel = available.reduce((best, p) =>
+      (p.priority < best.priority || (p.priority === best.priority && p.at < best.at)) ? p : best
+    );
+
+    log(`🏆 Selected <strong>${sel.pid}</strong> (priority=${sel.priority}, lowest = highest priority)`, 'step');
+
+    sel.rt = t - sel.at;
+    sel.ct = t + sel.bt;
+    sel.tat = sel.ct - sel.at;
+    sel.wt = sel.tat - sel.bt;
+    ganttData.push({ pid: sel.pid, start: t, end: sel.ct, colorIdx: sel.colorIdx });
+    log(`⚙️ Executing <strong>${sel.pid}</strong> from t=${t} to t=${sel.ct}`, 'event');
+    t = sel.ct;
+    sel.done = true;
+    completed++;
+    results.push(sel);
+  }
+
+  renderResults();
+  log('✅ Priority Scheduling Simulation complete!', 'success');
+}
+
+function runMLFQ() {
+  const q1 = 2, q2 = 4;
+  let procs = processes.map(p => ({...p, rem: p.bt, done: false, queue: 1, started: false}));
+  let t = 0;
+  let q1arr = [], q2arr = [], q3arr = [];
+  ganttData = [];
+  results = [];
+  let arrived = new Set();
+
+  log('Running Multi-Level Feedback Queue (MLFQ)...', 'step');
+  log('Queue 1: RR(q=2) → Queue 2: RR(q=4) → Queue 3: FCFS', 'info');
+
+  // Initial arrivals
+  procs.filter(p => p.at <= 0).forEach(p => { q1arr.push(p); arrived.add(p.pid); });
+
+  const checkArrivals = () => {
+    procs.filter(p => !p.done && p.at <= t && !arrived.has(p.pid)).forEach(p => {
+      q1arr.push(p); arrived.add(p.pid);
+      log(`🆕 <strong>${p.pid}</strong> arrived, added to Queue 1`, 'info');
+    });
+  };
+
+  while (results.length < procs.length) {
+    checkArrivals();
+
+    if (q1arr.length === 0 && q2arr.length === 0 && q3arr.length === 0) {
+      let unarrived = procs.filter(p => !p.done && !arrived.has(p.pid));
+      if (unarrived.length === 0) break;
+      let nextAt = Math.min(...unarrived.map(p => p.at));
+      ganttData.push({ pid: 'IDLE', start: t, end: nextAt, colorIdx: -1 });
+      log(`⏳ CPU idle from t=${t} to t=${nextAt}`, 'warning');
+      t = nextAt;
+      checkArrivals();
+      continue;
+    }
+
+    let p, quantum, fromQ;
+
+    if (q1arr.length > 0) {
+      p = q1arr.shift(); quantum = q1; fromQ = 1;
+    } else if (q2arr.length > 0) {
+      p = q2arr.shift(); quantum = q2; fromQ = 2;
+    } else {
+      p = q3arr.shift(); quantum = Infinity; fromQ = 3;
+    }
+
+    if (!p.started) { p.rt = t - p.at; p.started = true; }
+    
+    let exec = Math.min(quantum === Infinity ? p.rem : quantum, p.rem);
+    let start = t;
+    t += exec;
+    p.rem -= exec;
+
+    // New arrivals during slice → Q1
+    procs.filter(proc => !proc.done && proc.at > start && proc.at <= t && !arrived.has(proc.pid))
+         .forEach(proc => { q1arr.push(proc); arrived.add(proc.pid); });
+
+    ganttData.push({ pid: p.pid, start, end: t, colorIdx: p.colorIdx });
+    log(`⚙️ Q${fromQ}: <strong>${p.pid}</strong> runs t=${start}→t=${t} (rem=${p.rem})`, 'event');
+
+    if (p.rem === 0) {
+      p.ct = t;
+      p.tat = p.ct - p.at;
+      p.wt = p.tat - p.bt;
+      p.done = true;
+      results.push(p);
+      log(`✅ <strong>${p.pid}</strong> completed from Queue ${fromQ} at t=${t}`, 'success');
+    } else if (fromQ === 1) {
+      q2arr.push(p);
+      log(`⬇️ <strong>${p.pid}</strong> demoted Q1 → Q2`, 'warning');
+    } else if (fromQ === 2) {
+      q3arr.push(p);
+      log(`⬇️ <strong>${p.pid}</strong> demoted Q2 → Q3`, 'warning');
+    } else {
+      q3arr.push(p); // stays in Q3
+    }
+  }
+
+  renderResults();
+  log('✅ MLFQ Simulation complete!', 'success');
+}
+
+function getColorIdx(pid) {
+  const p = processes.find(p => p.pid === pid);
+  return p ? p.colorIdx : 0;
+}
+
+// ====================== RENDER RESULTS ======================
+function renderResults() {
+  renderGanttChart();
+  renderStatsGrid();
+  renderResultsTable();
+  renderQueueVisual();
+}
+
+function renderGanttChart() {
+  const section = document.getElementById('ganttSection');
+  if (!ganttData.length) return;
+
+  const totalTime = ganttData[ganttData.length - 1].end;
+
+  // Merge consecutive same-process blocks for display
+  let merged = [];
+  for (let b of ganttData) {
+    if (merged.length && merged[merged.length-1].pid === b.pid && merged[merged.length-1].end === b.start) {
+      merged[merged.length-1].end = b.end;
+    } else {
+      merged.push({...b});
+    }
+  }
+
+  const scale = Math.max(60, Math.min(120, 800 / merged.length));
+
+  const blocks = merged.map((b, i) => {
+    const w = (b.end - b.start) * scale;
+    const isIdle = b.pid === 'IDLE';
+    const colorClass = isIdle ? 'idle' : processColors[b.colorIdx] || 'color-p0';
+    return `
+      <div class="gantt-block ${colorClass}" 
+           style="min-width:${w}px;max-width:${w}px"
+           data-pid="${b.pid}" data-start="${b.start}" data-end="${b.end}"
+           id="gblock-${i}">
+        <div class="tooltip">${b.pid}: t${b.start}→t${b.end}</div>
+        <div class="gantt-block-pid">${b.pid}</div>
+        <div class="gantt-block-time">${b.end - b.start}u</div>
+      </div>
+    `;
+  }).join('');
+
+  // Timeline ticks
+  let ticks = '';
+  let seenTimes = new Set();
+  for (let b of merged) {
+    if (!seenTimes.has(b.start)) {
+      ticks += `<div class="gantt-tick" style="min-width:${(b.end-b.start)*scale}px">${b.start}</div>`;
+      seenTimes.add(b.start);
+    }
+  }
+  ticks += `<div class="gantt-tick">${totalTime}</div>`;
+
+  document.getElementById('ganttSubtitle').textContent = `${getAlgoName(selectedAlgo)} | Total time: ${totalTime} units | ${merged.length} blocks`;
+  section.innerHTML = `
+    <div class="gantt-container">
+      <div class="gantt-chart" id="ganttChart">${blocks}</div>
+      <div class="gantt-timeline">${ticks}</div>
+    </div>
+    <div class="legend" style="margin-top:14px">
+      ${processes.map(p => `<div class="legend-item"><div class="legend-dot ${dotColors[p.colorIdx]}"></div><span>${p.pid} (BT=${p.bt})</span></div>`).join('')}
+      <div class="legend-item"><div class="legend-dot" style="background:repeating-linear-gradient(45deg,#1a2040,#1a2040 3px,#202846 3px,#202846 6px)"></div><span>IDLE</span></div>
+    </div>
+  `;
+}
+
+function renderStatsGrid() {
+  const card = document.getElementById('statsCard');
+  card.style.display = 'block';
+
+  const n = results.length;
+  const avgTAT = results.reduce((s, p) => s + p.tat, 0) / n;
+  const avgWT = results.reduce((s, p) => s + p.wt, 0) / n;
+  const avgRT = results.reduce((s, p) => s + p.rt, 0) / n;
+
+  const totalTime = ganttData[ganttData.length - 1].end;
+  const busyTime = results.reduce((s, p) => s + p.bt, 0);
+  const cpuUtil = ((busyTime / totalTime) * 100).toFixed(1);
+  const throughput = (n / totalTime).toFixed(3);
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--accent-blue)">${avgTAT.toFixed(2)}</div>
+      <div class="stat-label">Avg Turnaround</div>
+      <div class="stat-unit">units</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--accent-green)">${avgWT.toFixed(2)}</div>
+      <div class="stat-label">Avg Waiting</div>
+      <div class="stat-unit">units</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--accent-purple)">${avgRT.toFixed(2)}</div>
+      <div class="stat-label">Avg Response</div>
+      <div class="stat-unit">units</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color:var(--accent-yellow)">${cpuUtil}%</div>
+      <div class="stat-label">CPU Utilization</div>
+      <div class="stat-unit">${throughput} proc/u</div>
+    </div>
+  `;
+
+  log(`📈 Stats — Avg TAT: ${avgTAT.toFixed(2)}, Avg WT: ${avgWT.toFixed(2)}, CPU Util: ${cpuUtil}%`, 'success');
+}
+
+function renderResultsTable() {
+  const card = document.getElementById('resultsCard');
+  card.style.display = 'block';
+
+  const avgWT = results.reduce((s, p) => s + p.wt, 0) / results.length;
+
+  document.getElementById('resultsTableBody').innerHTML = results.map(p => `
+    <tr>
+      <td><span class="pid-badge" style="background:${hexColors[p.colorIdx]}22;color:${hexColors[p.colorIdx]};border:1px solid ${hexColors[p.colorIdx]}44">${p.pid}</span></td>
+      <td>${p.at}</td>
+      <td>${p.bt}</td>
+      <td class="highlight-cell">${p.ct}</td>
+      <td class="highlight-cell">${p.tat}</td>
+      <td class="${p.wt <= avgWT ? 'good' : 'bad'}">${p.wt}</td>
+      <td>${p.rt}</td>
+    </tr>
+  `).join('');
+}
+
+function renderQueueVisual() {
+  const card = document.getElementById('queueCard');
+  card.style.display = 'block';
+  const vis = document.getElementById('queueVisual');
+
+  // Show final order processes were scheduled
+  vis.innerHTML = results.map((p, i) => `
+    <div class="queue-item" style="background:${hexColors[p.colorIdx]};animation-delay:${i*0.1}s">
+      ${p.pid} WT:${p.wt}
+    </div>
+  `).join('') + `<div style="font-size:11px;color:var(--text-muted);width:100%;margin-top:6px">Execution order (left = first completed)</div>`;
+}
+
+// ====================== GANTT ANIMATION ======================
+function animateGantt() {
+  const blocks = document.querySelectorAll('.gantt-block');
+  blocks.forEach((b, i) => {
+    setTimeout(() => {
+      b.classList.add('active-block');
+      setTimeout(() => b.classList.remove('active-block'), 600);
+
+      const pid = b.getAttribute('data-pid');
+      const start = b.getAttribute('data-start');
+      const end = b.getAttribute('data-end');
+      if (pid !== 'IDLE') log(`🎬 Highlighting: <strong>${pid}</strong> (t=${start} to t=${end})`, 'event');
+    }, i * 500);
+  });
+  showToast('Animating Gantt Chart...', 'info');
+}
+
+// ====================== OPERATION LOG ======================
+function log(msg, type = 'step') {
+  const container = document.getElementById('logContainer');
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.innerHTML = `<span class="log-timestamp">[${ts}]</span> ${msg}`;
+  container.appendChild(entry);
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearLogEntries() {
+  const c = document.getElementById('logContainer');
+  c.innerHTML = '';
+}
+
+function clearLog() {
+  document.getElementById('logContainer').innerHTML = '';
+  log('Log cleared', 'info');
+}
+
+// ====================== TOAST ======================
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  const toastIcon = document.getElementById('toastIcon');
+  
+  toast.className = 'toast toast-' + type;
+  toastMsg.textContent = msg;
+  toastIcon.textContent = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ====================== FAQ ======================
+function toggleFaq(item) {
+  const wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+
+// ====================== COPY CODE ======================
+function copyCode(btn) {
+  const pre = btn.parentElement.querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+    showToast('Code copied!', 'success');
+  }).catch(() => {
+    showToast('Copy failed', 'error');
+  });
+}
+
+// ====================== KEYBOARD SHORTCUTS ======================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id !== 'quantumInput') {
+    if (['pidInput','arrInput','burstInput','priorityInput'].includes(document.activeElement.id)) {
+      addProcess();
+    }
+  }
+  if (e.key === 'F5') { e.preventDefault(); runSimulation(); }
+});
+
+// ====================== INIT ======================
+(function init() {
+  loadSampleData();
+  log('💡 Tip: Press <strong>F5</strong> to run simulation or <strong>Enter</strong> in input fields to add process.', 'info');
+})();
+</script>
+</body>
+</html>
